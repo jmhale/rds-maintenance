@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-RDS Decomming
+RDS Functions
 """
 
 from datetime import datetime, timedelta
@@ -45,7 +45,7 @@ def get_vpc_ids(client):
     vpc_ids = []
     vpcs = client.describe_vpcs()['Vpcs']
     for vpc in vpcs:
-        vpc_ids.extend(vpc.VpcId)
+        vpc_ids.append(vpc['VpcId'])
     return vpc_ids
 
 def get_isolated_sgs(client):
@@ -53,24 +53,27 @@ def get_isolated_sgs(client):
     vpc_ids = get_vpc_ids(client)
     isolated_sgs = {}
     for vpc in vpc_ids:
-        isolated_sgs[vpc] = client.describe_security_groups(
+        sg = client.describe_security_groups(
             Filters=[
                 {
                     "Name": "vpc-id",
-                    "Value": vpc
+                    "Values": [vpc]
                 },
                 {
                     "Name": "tag:Name",
-                    "Values": "rds-isolate"
+                    "Values": ["rds-isolate"]
                 }
             ]
-        )['SecurityGroups'][0]['GroupId']
+        )['SecurityGroups']
+        try:
+            isolated_sgs[vpc] = sg[0]['GroupId']
+        except IndexError:
+            print("No rds-isolate group found for VPC: {}".format(vpc))
     return isolated_sgs
 
 def get_connections_statistics(client, rds_instances):
     " Returns a dict of all instances and their avg DB conns over all datapoints "
     rds_stats = {}
-
     for rds_instance in rds_instances:
         stats = client.get_metric_statistics(
             Namespace="AWS/RDS",
@@ -88,9 +91,9 @@ def get_connections_statistics(client, rds_instances):
         )['Datapoints']
         datapoints = []
         for stat in stats:
-            datapoints.extend(stat['Average'])
+            datapoints.append(stat['Average'])
         dp_conns = sum(datapoints)/float(len(datapoints))
-        rds_stats[rds_instance] = dp_conns
+        rds_stats[rds_instance['DBInstanceIdentifier']] = dp_conns
 
         return rds_stats
 
@@ -108,6 +111,7 @@ def set_security_group(client, rds_instance, sg_id):
     client.modify_db_instance(
         DBInstanceIdentifer=rds_instance['DBInstanceIdentifer'],
         VpcSecurityGroupIds=[sg_id]
+        # VpcSecurityGroupIds=[]
     )
 
 ##TODO: See if this outputs in a reliable order. Maybe we can just take the 0 index as the smallest.
@@ -127,13 +131,15 @@ def set_instance_size(client, rds_instance, size=None):
 
 def main():
     " Main execution "
-    session = get_session('access_key_id', 'secret_access_key')
+    session = get_session('', '')
     ec2 = get_ec2_client(session)
     rds = get_rds_client(session)
     cloudwatch = get_cloudwatch_client(session)
 
     print("DEBUG: Isolated SGs {}".format(get_isolated_sgs(ec2)))
     all_rds_instances = get_rds_instances(rds)
-    print("DEBUG: All RDS Instances {}".format(all_rds_instances))
+    print("DEBUG: All RDS Instances {}".format(all_rds_instances[0]['DBInstanceIdentifier']))
     all_rds_stats = get_connections_statistics(cloudwatch, all_rds_instances)
     print("DEBUG: All RDS Stats {}".format(all_rds_stats))
+
+main()
