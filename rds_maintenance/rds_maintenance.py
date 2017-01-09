@@ -164,5 +164,6 @@ def main():
             set_security_group(rds, rds_instance,
                                isolated_sgs[rds_instance['DBSubnetGroup']['VpcId']])
             set_instance_size(rds, rds_instance, 'db.t2.micro')
+            set_no_multiaz(rds, rds_instance)
 
 main()
