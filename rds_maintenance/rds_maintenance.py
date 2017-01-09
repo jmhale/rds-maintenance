@@ -101,7 +101,7 @@ def get_connections_statistics(client, rds_instances):
 def set_no_multiaz(client, rds_instance):
     " Takes a rds instance obj and turns off MultiAZ "
     client.modify_db_instance(
-        DBInstanceIdentifer=rds_instance['DBInstanceIdentifer'],
+        DBInstanceIdentifier=rds_instance['DBInstanceIdentifier'],
         MultiAZ=False,
         ApplyImmediately=True
     )
@@ -113,7 +113,6 @@ def set_security_group(client, rds_instance, sg_id):
         VpcSecurityGroupIds=[sg_id]
     )
 
-##TODO: See if this outputs in a reliable order. Maybe we can just take the 0 index as the smallest.
 def set_instance_size(client, rds_instance, size=None):
     " Sets instance to the smallest available size "
     if not size:
@@ -143,9 +142,11 @@ def main():
         print("DEBUG: Isolated SGs {}".format(isolated_sgs))
         print("DEBUG: All RDS Instances {}".format(all_rds_instances[0]['DBInstanceIdentifier']))
 
+    ## TODO: Feed a file of exluded instances in here
+    excluded_instances = []
     abandoned_instances = []
     for key in all_rds_stats:
-        if all_rds_stats[key] == 0:
+        if all_rds_stats[key] == 0 and key not in excluded_instances:
             abandoned_instances.append(key)
         if debug:
             print("DEBUG: Instance: %s. Connections: %s" % (key, all_rds_stats[key]))
