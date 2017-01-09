@@ -139,6 +139,30 @@ def set_instance_size(client, rds_instance, size=None):
     except botocore.exceptions.ClientError:
         print("Error setting size on instance %s" % rds_instance['DBInstanceIdentifier'])
 
+def get_isolated_instances(client, sg_id, vpc_id=None):
+    """ Gets all RDS instances that are using the sg_id """
+    rds_instances = get_rds_instances(client, vpc_id)
+
+    isolated_instances = []
+    for instance in rds_instances:
+        sgs = instance['VpcSecurityGroups']
+        for sg in sgs:
+            if sg['VpcSecurityGroupId'] == sg_id:
+                isolated_instances.append(instance)
+
+    return isolated_instances
+
+
+    def take_snapshot(client, rds_instance):
+        """ Takes a snapshot of an RDS instance """
+        #TODO
+        pass
+
+    def cfn_destroy(client, cfn_stack):
+        """ Destroys a Cloudformation stack """
+        #TODO
+        pass
+
 def main():
     " Main execution "
     debug = False
