@@ -94,8 +94,11 @@ def get_connections_statistics(client, rds_instances):
         datapoints = []
         for stat in stats:
             datapoints.append(stat['Average'])
-        dp_conns = sum(datapoints)/float(len(datapoints))
-        rds_stats[rds_instance['DBInstanceIdentifier']] = dp_conns
+        if len(datapoints) > 0:
+            dp_conns = sum(datapoints)/float(len(datapoints))
+            rds_stats[rds_instance['DBInstanceIdentifier']] = dp_conns
+        else:
+            print("Instance: %s has no datapoints." % rds_instance['DBInstanceIdentifier'])
 
     return rds_stats
 
