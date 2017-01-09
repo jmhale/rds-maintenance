@@ -150,6 +150,8 @@ def main():
 
     isolated_sgs = get_isolated_sgs(ec2)
     all_rds_instances = get_rds_instances(rds)
+    if debug:
+        print("DEBUG: Number of RDS instances found: %s" % len(all_rds_instances))
     all_rds_stats = get_connections_statistics(cloudwatch, all_rds_instances)
     if debug:
         print("DEBUG: Isolated SGs {}".format(isolated_sgs))
@@ -158,7 +160,7 @@ def main():
             print(instance['DBInstanceIdentifier'])
     abandoned_instances = []
     if len(excluded_instances) > 0:
-        print("The following instances meet low connections criteria, but have been excluded.")
+        print("\nThe following instances meet low connections criteria, but have been excluded.")
     for key in all_rds_stats:
         if all_rds_stats[key] == 0 and key not in excluded_instances:
             abandoned_instances.append(key)
