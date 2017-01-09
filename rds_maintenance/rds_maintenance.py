@@ -32,11 +32,10 @@ def get_rds_instances(client, vpc_id=None):
 
     rds_instances = []
     resp = client.describe_db_instances()
-    while 'NextToken' in resp:
+    while 'Marker' in resp:
         rds_instances.extend(resp['DBInstances'])
-        resp = client.describe_db_instances(NextToken=resp['NextToken'])
+        resp = client.describe_db_instances(Marker=resp['Marker'])
     rds_instances.extend(resp['DBInstances'])
-
     if not vpc_id:
         return rds_instances
     else:
@@ -97,7 +96,7 @@ def get_connections_statistics(client, rds_instances):
         dp_conns = sum(datapoints)/float(len(datapoints))
         rds_stats[rds_instance['DBInstanceIdentifier']] = dp_conns
 
-        return rds_stats
+    return rds_stats
 
 def set_no_multiaz(client, rds_instance):
     " Takes a rds instance obj and turns off MultiAZ "
@@ -130,8 +129,8 @@ def set_instance_size(client, rds_instance, size=None):
 
 def main():
     " Main execution "
-    debug = False
-    dry_run = False
+    debug = True
+    dry_run = True
     session = get_session('', '')
     ec2 = get_ec2_client(session)
     rds = get_rds_client(session)
@@ -142,25 +141,25 @@ def main():
     all_rds_stats = get_connections_statistics(cloudwatch, all_rds_instances)
     if debug:
         print("DEBUG: Isolated SGs {}".format(isolated_sgs))
-        print("DEBUG: All RDS Instances {}".format(all_rds_instances[0]['DBInstanceIdentifier']))
-
+        print("DEBUG: All RDS Instances :")
+        for instance in all_rds_instances:
+            print(instance['DBInstanceIdentifier'])
     abandoned_instances = []
     for key in all_rds_stats:
-        if all_rds_stats[key] < 1 and key not in excluded_instances:
+        if all_rds_stats[key] == 0 and key not in excluded_instances:
             abandoned_instances.append(key)
-        elif all_rds_stats[key] < 1 and key in excluded_instances:
+        elif all_rds_stats[key] == 0 and key in excluded_instances:
             print("%s meets low connections criteria, but has been excluded." % key)
         if debug:
             print("DEBUG: Instance: %s. Connections: %s" % (key, all_rds_stats[key]))
-
     if len(abandoned_instances) > 0:
-        print("The following instances appear to be abandoned. Please investigate.")
+        print("\nThe following instances appear to be abandoned. Please investigate.")
         for instance in abandoned_instances:
             print(instance)
     else:
-        print("No instances appear to be abandoned.")
+        print("\nNo instances appear to be abandoned.")
         sys.exit(0)
-
+    print("\nTaking action on the following instances: ")
     for rds_instance in all_rds_instances:
         if rds_instance['DBInstanceIdentifier'] in abandoned_instances:
             if dry_run:
