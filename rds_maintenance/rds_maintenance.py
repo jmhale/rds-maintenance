@@ -7,6 +7,7 @@ import sys
 from datetime import datetime, timedelta
 from exclusions import excluded_instances
 import boto3
+import botocore
 
 def get_session(access_key_id, secret_access_key):
     " Establishes a session with AWS "
@@ -100,18 +101,24 @@ def get_connections_statistics(client, rds_instances):
 
 def set_no_multiaz(client, rds_instance):
     " Takes a rds instance obj and turns off MultiAZ "
-    client.modify_db_instance(
-        DBInstanceIdentifier=rds_instance['DBInstanceIdentifier'],
-        MultiAZ=False,
-        ApplyImmediately=True
-    )
+    try:
+        client.modify_db_instance(
+            DBInstanceIdentifier=rds_instance['DBInstanceIdentifier'],
+            MultiAZ=False,
+            ApplyImmediately=True
+        )
+    except botocore.exceptions.ClientError:
+        print("Error setting no-multiaz on instance %s" % rds_instance['DBInstanceIdentifier'])
 
 def set_security_group(client, rds_instance, sg_id):
     " Sets the rds_instance Security Group to sg_id "
-    client.modify_db_instance(
-        DBInstanceIdentifier=rds_instance['DBInstanceIdentifier'],
-        VpcSecurityGroupIds=[sg_id]
-    )
+    try:
+        client.modify_db_instance(
+            DBInstanceIdentifier=rds_instance['DBInstanceIdentifier'],
+            VpcSecurityGroupIds=[sg_id]
+        )
+    except botocore.exceptions.ClientError:
+        print("Error setting SG on instance %s" % rds_instance['DBInstanceIdentifier'])
 
 def set_instance_size(client, rds_instance, size=None):
     " Sets instance to the smallest available size "
@@ -120,17 +127,19 @@ def set_instance_size(client, rds_instance, size=None):
             Engine=rds_instance['Engine']
         )['OrderableDBInstanceOptions']
         size = available_sizes[0]['DBInstanceClass']
-
-    client.modify_db_instance(
-        DBInstanceIdentifier=rds_instance['DBInstanceIdentifier'],
-        DBInstanceClass=size,
-        ApplyImmediately=True
-    )
+    try:
+        client.modify_db_instance(
+            DBInstanceIdentifier=rds_instance['DBInstanceIdentifier'],
+            DBInstanceClass=size,
+            ApplyImmediately=True
+        )
+    except botocore.exceptions.ClientError:
+        print("Error setting size on instance %s" % rds_instance['DBInstanceIdentifier'])
 
 def main():
     " Main execution "
-    debug = True
-    dry_run = True
+    debug = False
+    dry_run = False
     session = get_session('', '')
     ec2 = get_ec2_client(session)
     rds = get_rds_client(session)
@@ -141,15 +150,17 @@ def main():
     all_rds_stats = get_connections_statistics(cloudwatch, all_rds_instances)
     if debug:
         print("DEBUG: Isolated SGs {}".format(isolated_sgs))
-        print("DEBUG: All RDS Instances :")
+        print("DEBUG: All RDS Instances: ")
         for instance in all_rds_instances:
             print(instance['DBInstanceIdentifier'])
     abandoned_instances = []
+    if len(excluded_instances) > 0:
+        print("The following instances meet low connections criteria, but have been excluded.")
     for key in all_rds_stats:
         if all_rds_stats[key] == 0 and key not in excluded_instances:
             abandoned_instances.append(key)
         elif all_rds_stats[key] == 0 and key in excluded_instances:
-            print("%s meets low connections criteria, but has been excluded." % key)
+            print(key)
         if debug:
             print("DEBUG: Instance: %s. Connections: %s" % (key, all_rds_stats[key]))
     if len(abandoned_instances) > 0:
