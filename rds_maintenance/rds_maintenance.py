@@ -5,6 +5,7 @@ RDS Functions
 
 import sys
 from datetime import datetime, timedelta
+from exclusions import excluded_instances
 import boto3
 
 def get_session(access_key_id, secret_access_key):
@@ -129,7 +130,8 @@ def set_instance_size(client, rds_instance, size=None):
 
 def main():
     " Main execution "
-    debug = True
+    debug = False
+    dry_run = False
     session = get_session('', '')
     ec2 = get_ec2_client(session)
     rds = get_rds_client(session)
@@ -142,12 +144,12 @@ def main():
         print("DEBUG: Isolated SGs {}".format(isolated_sgs))
         print("DEBUG: All RDS Instances {}".format(all_rds_instances[0]['DBInstanceIdentifier']))
 
-    ## TODO: Feed a file of exluded instances in here
-    excluded_instances = []
     abandoned_instances = []
     for key in all_rds_stats:
-        if all_rds_stats[key] == 0 and key not in excluded_instances:
+        if all_rds_stats[key] < 1 and key not in excluded_instances:
             abandoned_instances.append(key)
+        elif all_rds_stats[key] < 1 and key in excluded_instances:
+            print("%s meets low connections criteria, but has been excluded." % key)
         if debug:
             print("DEBUG: Instance: %s. Connections: %s" % (key, all_rds_stats[key]))
 
@@ -161,10 +163,20 @@ def main():
 
     for rds_instance in all_rds_instances:
         if rds_instance['DBInstanceIdentifier'] in abandoned_instances:
-            print("Isolating and downsizing instance: %s" % rds_instance['DBInstanceIdentifier'])
-            set_security_group(rds, rds_instance,
-                               isolated_sgs[rds_instance['DBSubnetGroup']['VpcId']])
-            set_instance_size(rds, rds_instance, 'db.t2.micro')
-            set_no_multiaz(rds, rds_instance)
+            if dry_run:
+                print("DRYRUN: %s would have been isolated and downsized."
+                      % rds_instance['DBInstanceIdentifier'])
+            else:
+                print("Isolating and downsizing instance: %s"
+                      % rds_instance['DBInstanceIdentifier'])
+                set_security_group(rds,
+                                   rds_instance,
+                                   isolated_sgs[rds_instance['DBSubnetGroup']['VpcId']])
+
+                set_instance_size(rds,
+                                  rds_instance,
+                                  'db.t2.micro')
+
+                set_no_multiaz(rds, rds_instance)
 
 main()
