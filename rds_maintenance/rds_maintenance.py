@@ -3,6 +3,7 @@
 RDS Functions
 """
 
+import sys
 from datetime import datetime, timedelta
 import boto3
 
@@ -53,20 +54,20 @@ def get_isolated_sgs(client):
     vpc_ids = get_vpc_ids(client)
     isolated_sgs = {}
     for vpc in vpc_ids:
-        sg = client.describe_security_groups(
+        sec_groups = client.describe_security_groups(
             Filters=[
                 {
                     "Name": "vpc-id",
                     "Values": [vpc]
                 },
                 {
-                    "Name": "tag:Name",
+                    "Name": "group-name",
                     "Values": ["rds-isolate"]
                 }
             ]
         )['SecurityGroups']
         try:
-            isolated_sgs[vpc] = sg[0]['GroupId']
+            isolated_sgs[vpc] = sec_groups[0]['GroupId']
         except IndexError:
             print("No rds-isolate group found for VPC: {}".format(vpc))
     return isolated_sgs
@@ -105,13 +106,11 @@ def set_no_multiaz(client, rds_instance):
         ApplyImmediately=True
     )
 
-##TODO: See if we can set SG to empty set
 def set_security_group(client, rds_instance, sg_id):
     " Sets the rds_instance Security Group to sg_id "
     client.modify_db_instance(
-        DBInstanceIdentifer=rds_instance['DBInstanceIdentifer'],
+        DBInstanceIdentifier=rds_instance['DBInstanceIdentifier'],
         VpcSecurityGroupIds=[sg_id]
-        # VpcSecurityGroupIds=[]
     )
 
 ##TODO: See if this outputs in a reliable order. Maybe we can just take the 0 index as the smallest.
@@ -124,22 +123,46 @@ def set_instance_size(client, rds_instance, size=None):
         size = available_sizes[0]['DBInstanceClass']
 
     client.modify_db_instance(
-        DBInstanceIdentifer=rds_instance['DBInstanceIdentifer'],
+        DBInstanceIdentifier=rds_instance['DBInstanceIdentifier'],
         DBInstanceClass=size,
         ApplyImmediately=True
     )
 
 def main():
     " Main execution "
+    debug = True
     session = get_session('', '')
     ec2 = get_ec2_client(session)
     rds = get_rds_client(session)
     cloudwatch = get_cloudwatch_client(session)
 
-    print("DEBUG: Isolated SGs {}".format(get_isolated_sgs(ec2)))
+    isolated_sgs = get_isolated_sgs(ec2)
     all_rds_instances = get_rds_instances(rds)
-    print("DEBUG: All RDS Instances {}".format(all_rds_instances[0]['DBInstanceIdentifier']))
     all_rds_stats = get_connections_statistics(cloudwatch, all_rds_instances)
-    print("DEBUG: All RDS Stats {}".format(all_rds_stats))
+    if debug:
+        print("DEBUG: Isolated SGs {}".format(isolated_sgs))
+        print("DEBUG: All RDS Instances {}".format(all_rds_instances[0]['DBInstanceIdentifier']))
+
+    abandoned_instances = []
+    for key in all_rds_stats:
+        if all_rds_stats[key] == 0:
+            abandoned_instances.append(key)
+        if debug:
+            print("DEBUG: Instance: %s. Connections: %s" % (key, all_rds_stats[key]))
+
+    if len(abandoned_instances) > 0:
+        print("The following instances appear to be abandoned. Please investigate.")
+        for instance in abandoned_instances:
+            print(instance)
+    else:
+        print("No instances appear to be abandoned.")
+        sys.exit(0)
+
+    for rds_instance in all_rds_instances:
+        if rds_instance['DBInstanceIdentifier'] in abandoned_instances:
+            print("Isolating and downsizing instance: %s" % rds_instance['DBInstanceIdentifier'])
+            set_security_group(rds, rds_instance,
+                               isolated_sgs[rds_instance['DBSubnetGroup']['VpcId']])
+            set_instance_size(rds, rds_instance, 'db.t2.micro')
 
 main()
