@@ -40,7 +40,7 @@ def get_rds_instances(client, vpc_id=None):
     if not vpc_id:
         return rds_instances
     else:
-        return [r for r in rds_instances if r['DBSubnetGroup.VpcId'].equals(vpc_id)]
+        return [r for r in rds_instances if r['DBSubnetGroup']['VpcId'] == vpc_id]
 
 def get_vpc_ids(client):
     " Returns a list of VPC IDs in the account "
