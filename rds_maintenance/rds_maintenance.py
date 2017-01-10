@@ -17,18 +17,6 @@ def get_session(access_key_id, secret_access_key):
         aws_secret_access_key=secret_access_key
     )
 
-def get_rds_client(session):
-    " Returns a RDS boto client "
-    return session.client('rds')
-
-def get_cloudwatch_client(session):
-    " Returns a CloudWatch boto client "
-    return session.client('cloudwatch')
-
-def get_ec2_client(session):
-    " Returns a EC2 boto client "
-    return session.client('ec2')
-
 ## EC2 operations
 def get_vpc_ids(client):
     " Returns a list of VPC IDs in the account "
@@ -259,9 +247,10 @@ def main():
     debug = True
 
     session = get_session('', '')
-    ec2 = get_ec2_client(session)
-    rds = get_rds_client(session)
-    # cfn = get_cloudwatch_client(session)
+    ec2 = session.client('ec2')
+    rds = session.client('rds')
+    cdw = session.client('cloudwatch')
+    cfn = session.client('cloudformation')
 
     # prep_rds_instances_for_decomm(ec2, rds, cfn, dry_run, debug)
     old_instances = get_old_instances(ec2, rds, debug)
