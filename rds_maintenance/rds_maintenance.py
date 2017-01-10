@@ -255,6 +255,15 @@ def get_old_instances(ec2, rds, debug=True):
     return old_instances
 
 def snapshot_old_rds_instances(rds, old_instances, dry_run=True):
+def get_old_stacks(cfn, old_instances, debug=True):
+    """ Gets all of the stacks for the old RDS instances """
+    old_stacks = get_cfn_stack_for_rds(cfn, old_instances, debug)
+
+    if debug:
+        print("DEBUG: Old stacks found: %s" % len(old_stacks))
+
+    return old_stacks
+
     """ Performs a final snapshot on old RDS instances. """
     for instance in old_instances:
         if not dry_run:
