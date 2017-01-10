@@ -5,7 +5,7 @@ RDS Functions
 
 import sys
 from datetime import datetime, timedelta
-from exclusions import excluded_instances
+from exclusions import EXCLUDED_INSTANCES as excluded_instances
 import boto3
 import botocore
 
@@ -149,9 +149,9 @@ def get_instances_with_sg(client, sg_id, vpc_id=None):
 
     instances_with_sg = []
     for instance in rds_instances:
-        sgs = instance['VpcSecurityGroups']
-        for sg in sgs:
-            if sg['VpcSecurityGroupId'] == sg_id:
+        security_groups = instance['VpcSecurityGroups']
+        for security_group in security_groups:
+            if security_group['VpcSecurityGroupId'] == sg_id:
                 instances_with_sg.append(instance)
 
     return instances_with_sg
@@ -167,16 +167,18 @@ def take_snapshot(client, rds_instance):
           % (rds_instance['DBInstanceIdentifier'], resp['DBSnapshot']['DBSnapshotIdentifier']))
 
 ## CloudFormation operations
-def get_cfn_stacks(client):
+def get_cfn_stacks():
+    """ Returns all CFN stacks """
+    #TODO
     pass
 
-def destroy_cfn_stack(client, cfn_stack):
+def destroy_cfn_stack():
     """ Destroys a Cloudformation stack """
     #TODO
     pass
 
 ##
-def get_old_instances(ec2, rds, dry_run=True, debug=True):
+def get_old_instances(ec2, rds, debug=True):
     """ Gets RDS instances slated for decomm """
     isolated_sgs = get_isolated_sgs(ec2)
     old_instances = []
@@ -252,16 +254,17 @@ def prep_rds_instances_for_decomm(ec2, rds, cloudwatch, dry_run=True, debug=True
                 set_no_multiaz(rds, rds_instance)
 
 def main():
+    """ main execution """
     dry_run = True
     debug = True
 
     session = get_session('', '')
     ec2 = get_ec2_client(session)
     rds = get_rds_client(session)
-    cfn = get_cloudwatch_client(session)
+    # cfn = get_cloudwatch_client(session)
 
     # prep_rds_instances_for_decomm(ec2, rds, cfn, dry_run, debug)
-    old_instances = get_old_instances(ec2, rds, dry_run, debug)
+    old_instances = get_old_instances(ec2, rds, debug)
     snapshot_old_rds_instances(rds, old_instances, dry_run)
 
 main()
