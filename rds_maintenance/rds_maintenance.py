@@ -165,14 +165,6 @@ def take_snapshot(client, rds_instance):
 def get_cfn_stacks(client):
     pass
 
-def main():
-    " Main execution "
-    debug = False
-    dry_run = False
-    session = get_session('', '')
-    ec2 = get_ec2_client(session)
-    rds = get_rds_client(session)
-    cloudwatch = get_cloudwatch_client(session)
 def destroy_cfn_stack(client, cfn_stack):
     """ Destroys a Cloudformation stack """
     #TODO
@@ -201,6 +193,11 @@ def snapshot_old_rds_instances(rds, old_instances, dry_run=True):
         else:
             print("DRYRUN: Would have taken a snapshot of %s" % instance['DBInstanceIdentifier'])
 
+def prep_rds_instances_for_decomm(ec2, rds, cloudwatch, dry_run=True, debug=True):
+    """
+    Finds RDS instances with low connection counts and
+    applies an isolated SG, sizes it down and sets to single AZ
+    """
 
     isolated_sgs = get_isolated_sgs(ec2)
     all_rds_instances = get_rds_instances(rds)
@@ -247,5 +244,18 @@ def snapshot_old_rds_instances(rds, old_instances, dry_run=True):
                                   'db.t2.micro')
 
                 set_no_multiaz(rds, rds_instance)
+
+def main():
+    dry_run = True
+    debug = True
+
+    session = get_session('', '')
+    ec2 = get_ec2_client(session)
+    rds = get_rds_client(session)
+    cfn = get_cloudwatch_client(session)
+
+    # prep_rds_instances_for_decomm(ec2, rds, cfn, dry_run, debug)
+    old_instances = get_old_instances(ec2, rds, dry_run, debug)
+    snapshot_old_rds_instances(rds, old_instances, dry_run)
 
 main()
