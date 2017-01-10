@@ -5,7 +5,7 @@ RDS Functions
 
 import sys
 from datetime import datetime, timedelta
-from exclusions import EXCLUDED_INSTANCES as excluded_instances
+from exclusions import EXCLUDED_INSTANCES
 import boto3
 import botocore
 
@@ -218,12 +218,12 @@ def prep_rds_instances_for_decomm(ec2, rds, cloudwatch, dry_run=True, debug=True
         for instance in all_rds_instances:
             print(instance['DBInstanceIdentifier'])
     abandoned_instances = []
-    if len(excluded_instances) > 0:
+    if len(EXCLUDED_INSTANCES) > 0:
         print("\nThe following instances meet low connections criteria, but have been excluded.")
     for key in all_rds_stats:
-        if all_rds_stats[key] == 0 and key not in excluded_instances:
+        if all_rds_stats[key] == 0 and key not in EXCLUDED_INSTANCES:
             abandoned_instances.append(key)
-        elif all_rds_stats[key] == 0 and key in excluded_instances:
+        elif all_rds_stats[key] == 0 and key in EXCLUDED_INSTANCES:
             print(key)
         if debug:
             print("DEBUG: Instance: %s. Connections: %s" % (key, all_rds_stats[key]))
