@@ -207,6 +207,20 @@ def get_cfn_stacks():
     pass
 
 def destroy_cfn_stack():
+def get_cfn_stack_for_rds(cfn, rds_instances, debug=True):
+    """ Gets all CFN stacks for the given RDS instances """
+    stacks = get_all_cfn_stacks(cfn)
+    old_stacks = []
+
+    for instance in rds_instances:
+        for stack in stacks:
+            if stack['StackName'] == instance['DBInstanceIdentifier']:
+                old_stacks.append(stack)
+                if debug:
+                    print("Stack: %s" % stack['StackName'])
+
+    return old_stacks
+
     """ Destroys a Cloudformation stack """
     #TODO
     pass
