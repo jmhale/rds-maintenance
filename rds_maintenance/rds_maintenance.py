@@ -162,10 +162,8 @@ def take_snapshot(client, rds_instance):
     print("Created final snapshot for %s, %s"
           % (rds_instance['DBInstanceIdentifier'], resp['DBSnapshot']['DBSnapshotIdentifier']))
 
-    def cfn_destroy(client, cfn_stack):
-        """ Destroys a Cloudformation stack """
-        #TODO
-        pass
+def get_cfn_stacks(client):
+    pass
 
 def main():
     " Main execution "
