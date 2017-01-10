@@ -177,6 +177,15 @@ def get_latest_snap(client, rds_instance, debug=True):
 
     return sorted_snapshots[0]
 
+def check_final_snap(client, rds_instance):
+    """ Check if the final snapshot has already been created """
+    snapshots = get_snaps_for_instance(client, rds_instance, 'manual')
+    for snapshot in snapshots:
+        if snapshot['DBSnapshotIdentifier'].startswith('%s-final-snapshot'
+                                                % rds_instance['DBInstanceIdentifier']):
+            return True
+    return False
+
 def copy_snapshot(client, rds_instance, debug=True):
     """ Copy a snapshot the latest automated snapshot """
     latest_snap = get_latest_snap(client, rds_instance, debug)
@@ -276,12 +285,19 @@ def get_old_stacks(cfn, old_instances, debug=True):
 def snapshot_old_rds_instances(rds, old_instances, dry_run=True, debug=True):
     """ Performs a final snapshot on old RDS instances. """
     for instance in old_instances:
+        has_final_snap = check_final_snap(rds, instance)
         latest_snap = get_latest_snap(rds, instance, debug)
-        if not dry_run and latest_snap is not None:
+
+        if not dry_run and latest_snap is not None and not has_final_snap:
             copy_snapshot(rds, instance, debug)
-        elif dry_run and latest_snap is not None:
+        elif not dry_run and latest_snap is not None and has_final_snap:
+            print("%s already has a final snapshot. Skipping." % instance['DBInstanceIdentifier'])
+        elif dry_run and latest_snap is not None and not has_final_snap:
             print("DRYRUN: Would have copied a snapshot of %s from %s"
                   % (instance['DBInstanceIdentifier'], latest_snap['DBSnapshotIdentifier']))
+        elif dry_run and latest_snap is not None and has_final_snap:
+            print("DRYRUN: %s already has a final snapshot. Would have skipped."
+                  % instance['DBInstanceIdentifier'])
         else:
             print("No automated snapshots found for %s." % instance['DBInstanceIdentifier'])
 
