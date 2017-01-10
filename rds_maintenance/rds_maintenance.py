@@ -206,7 +206,6 @@ def get_cfn_stacks():
     #TODO
     pass
 
-def destroy_cfn_stack():
 def get_cfn_stack_for_rds(cfn, rds_instances, debug=True):
     """ Gets all CFN stacks for the given RDS instances """
     stacks = get_all_cfn_stacks(cfn)
@@ -221,9 +220,16 @@ def get_cfn_stack_for_rds(cfn, rds_instances, debug=True):
 
     return old_stacks
 
+def destroy_cfn_stack(cfn, stack, dry_run=True):
     """ Destroys a Cloudformation stack """
-    #TODO
-    pass
+    if not dry_run:
+        try:
+            cfn.delete_stack(StackName=stack['StackName'])
+        except botocore.exceptions.ClientError as exception:
+            print("ERROR: Delete stack: %s failed with error: %s" % (stack['StackName'], exception))
+        print("Deleted stack: %s" % stack['StackName'])
+    else:
+        print("DRYRUN: Would have deleted stack: %s" % stack['StackName'])
 
 ##
 def get_old_instances(ec2, rds, debug=True):
