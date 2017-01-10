@@ -9,6 +9,7 @@ from exclusions import excluded_instances
 import boto3
 import botocore
 
+## Session/client setup operations
 def get_session(access_key_id, secret_access_key):
     " Establishes a session with AWS "
     return boto3.session.Session(
@@ -28,6 +29,7 @@ def get_ec2_client(session):
     " Returns a EC2 boto client "
     return session.client('ec2')
 
+## EC2 operations
 def get_vpc_ids(client):
     " Returns a list of VPC IDs in the account "
     vpc_ids = []
@@ -59,6 +61,7 @@ def get_isolated_sgs(client):
             print("No rds-isolate group found for VPC: {}".format(vpc))
     return isolated_sgs
 
+## Cloudwatch operations
 def get_connections_statistics(client, rds_instances):
     " Returns a dict of all instances and their avg DB conns over all datapoints "
     rds_stats = {}
@@ -88,6 +91,7 @@ def get_connections_statistics(client, rds_instances):
 
     return rds_stats
 
+## RDS operations
 def get_rds_instances(client, vpc_id=None):
     " Gets all RDS instances, per VPC, if specified. "
 
@@ -162,6 +166,7 @@ def take_snapshot(client, rds_instance):
     print("Created final snapshot for %s, %s"
           % (rds_instance['DBInstanceIdentifier'], resp['DBSnapshot']['DBSnapshotIdentifier']))
 
+## CloudFormation operations
 def get_cfn_stacks(client):
     pass
 
@@ -170,6 +175,7 @@ def destroy_cfn_stack(client, cfn_stack):
     #TODO
     pass
 
+##
 def get_old_instances(ec2, rds, dry_run=True, debug=True):
     """ Gets RDS instances slated for decomm """
     isolated_sgs = get_isolated_sgs(ec2)
