@@ -196,7 +196,7 @@ def get_old_instances(ec2, rds, debug=True):
 def snapshot_old_rds_instances(rds, old_instances, dry_run=True):
     """ Performs a final snapshot on old RDS instances. """
     for instance in old_instances:
-        if dry_run:
+        if not dry_run:
             take_snapshot(rds, instance)
         else:
             print("DRYRUN: Would have taken a snapshot of %s" % instance['DBInstanceIdentifier'])
