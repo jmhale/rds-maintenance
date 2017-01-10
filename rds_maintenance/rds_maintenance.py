@@ -5,6 +5,7 @@ RDS Functions
 
 import sys
 from datetime import datetime, timedelta
+from operator import itemgetter
 from exclusions import EXCLUDED_INSTANCES
 import boto3
 import botocore
@@ -144,15 +145,24 @@ def get_instances_with_sg(client, sg_id, vpc_id=None):
 
     return instances_with_sg
 
-def take_snapshot(client, rds_instance):
-    """ Takes a snapshot of an RDS instance """
+def get_snaps_for_instance(client, rds_instance, snapshot_type=''):
+    """ Gets all snapshots for a RDS instance"""
+    snapshots = []
 
-    resp = client.create_db_snapshot(
-        DBSnapshotIdentifier='%s-final-snapshot' % rds_instance['DBInstanceIdentifier'],
+    resp = client.describe_db_snapshots(
         DBInstanceIdentifier=rds_instance['DBInstanceIdentifier'],
+        SnapshotType=snapshot_type
     )
-    print("Created final snapshot for %s, %s"
-          % (rds_instance['DBInstanceIdentifier'], resp['DBSnapshot']['DBSnapshotIdentifier']))
+    while 'Marker' in resp:
+        snapshots.extend(resp['DBSnapshots'])
+        resp = client.describe_db_snapshots(
+            DBInstanceIdentifier=rds_instance['DBInstanceIdentifier'],
+            SnapshotType=snapshot_type,
+            Marker=resp['Marker']
+        )
+    snapshots.extend(resp['DBSnapshots'])
+    return snapshots
+
 def get_latest_snap(client, rds_instance, debug=True):
     """ Gets the latest snapshot for a RDS instance """
     snapshots = get_snaps_for_instance(client, rds_instance, 'automated')
@@ -310,22 +320,21 @@ def prep_rds_instances_for_decomm(ec2, rds, cloudwatch, dry_run=True, debug=True
         sys.exit(0)
     print("\nTaking action on the following instances: ")
     for rds_instance in all_rds_instances:
-        if rds_instance['DBInstanceIdentifier'] in abandoned_instances:
-            if dry_run:
-                print("DRYRUN: %s would have been isolated and downsized."
-                      % rds_instance['DBInstanceIdentifier'])
-            else:
-                print("Isolating and downsizing instance: %s"
-                      % rds_instance['DBInstanceIdentifier'])
-                set_security_group(rds,
-                                   rds_instance,
-                                   isolated_sgs[rds_instance['DBSubnetGroup']['VpcId']])
+        if rds_instance['DBInstanceIdentifier'] in abandoned_instances and dry_run:
+            print("DRYRUN: %s would have been isolated and downsized."
+                  % rds_instance['DBInstanceIdentifier'])
+        elif rds_instance['DBInstanceIdentifier'] in abandoned_instances and not dry_run:
+            print("Isolating and downsizing instance: %s"
+                  % rds_instance['DBInstanceIdentifier'])
+            set_security_group(rds,
+                               rds_instance,
+                               isolated_sgs[rds_instance['DBSubnetGroup']['VpcId']])
 
-                set_instance_size(rds,
-                                  rds_instance,
-                                  'db.t2.micro')
+            set_instance_size(rds,
+                              rds_instance,
+                              'db.t2.small')
 
-                set_no_multiaz(rds, rds_instance)
+            set_no_multiaz(rds, rds_instance)
 
 def main():
     """ main execution """
@@ -338,8 +347,9 @@ def main():
     cdw = session.client('cloudwatch')
     cfn = session.client('cloudformation')
 
-    # prep_rds_instances_for_decomm(ec2, rds, cfn, dry_run, debug)
+    # prep_rds_instances_for_decomm(ec2, rds, cdw, dry_run, debug)
     old_instances = get_old_instances(ec2, rds, debug)
-    snapshot_old_rds_instances(rds, old_instances, dry_run)
+    # snapshot_old_rds_instances(rds, old_instances, dry_run, debug)
+    old_stacks = get_old_stacks(cfn, old_instances, debug)
 
 main()
