@@ -254,7 +254,6 @@ def get_old_instances(ec2, rds, debug=True):
         print("%s instances found." % len(old_instances))
     return old_instances
 
-def snapshot_old_rds_instances(rds, old_instances, dry_run=True):
 def get_old_stacks(cfn, old_instances, debug=True):
     """ Gets all of the stacks for the old RDS instances """
     old_stacks = get_cfn_stack_for_rds(cfn, old_instances, debug)
@@ -264,12 +263,18 @@ def get_old_stacks(cfn, old_instances, debug=True):
 
     return old_stacks
 
+def snapshot_old_rds_instances(rds, old_instances, dry_run=True, debug=True):
     """ Performs a final snapshot on old RDS instances. """
     for instance in old_instances:
-        if not dry_run:
-            take_snapshot(rds, instance)
+        latest_snap = get_latest_snap(rds, instance, debug)
+        if not dry_run and latest_snap is not None:
+            copy_snapshot(rds, instance, debug)
+        elif dry_run and latest_snap is not None:
+            print("DRYRUN: Would have copied a snapshot of %s from %s"
+                  % (instance['DBInstanceIdentifier'], latest_snap['DBSnapshotIdentifier']))
         else:
-            print("DRYRUN: Would have taken a snapshot of %s" % instance['DBInstanceIdentifier'])
+            print("No automated snapshots found for %s." % instance['DBInstanceIdentifier'])
+
 
 def prep_rds_instances_for_decomm(ec2, rds, cloudwatch, dry_run=True, debug=True):
     """
