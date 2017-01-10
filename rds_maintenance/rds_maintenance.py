@@ -153,6 +153,20 @@ def take_snapshot(client, rds_instance):
     )
     print("Created final snapshot for %s, %s"
           % (rds_instance['DBInstanceIdentifier'], resp['DBSnapshot']['DBSnapshotIdentifier']))
+def get_latest_snap(client, rds_instance, debug=True):
+    """ Gets the latest snapshot for a RDS instance """
+    snapshots = get_snaps_for_instance(client, rds_instance, 'automated')
+    sorted_snapshots = sorted(snapshots, key=itemgetter('SnapshotCreateTime'), reverse=True)
+    if len(sorted_snapshots) == 0:
+        return None
+    if debug:
+        # for sorted_snapshot in sorted_snapshots:
+        #     print("DEBUG: Snapshot %s, created on: %s" % (sorted_snapshot['DBSnapshotIdentifier'],
+        #                                                    sorted_snapshot['SnapshotCreateTime']))
+        print("DEBUG: The latest snap should be: %s" % sorted_snapshots[0]['DBSnapshotIdentifier'])
+
+    return sorted_snapshots[0]
+
 def copy_snapshot(client, rds_instance, debug=True):
     """ Copy a snapshot the latest automated snapshot """
     latest_snap = get_latest_snap(client, rds_instance, debug)
