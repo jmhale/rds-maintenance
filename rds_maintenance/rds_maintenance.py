@@ -28,20 +28,6 @@ def get_ec2_client(session):
     " Returns a EC2 boto client "
     return session.client('ec2')
 
-def get_rds_instances(client, vpc_id=None):
-    " Gets all RDS instances, per VPC, if specified. "
-
-    rds_instances = []
-    resp = client.describe_db_instances()
-    while 'Marker' in resp:
-        rds_instances.extend(resp['DBInstances'])
-        resp = client.describe_db_instances(Marker=resp['Marker'])
-    rds_instances.extend(resp['DBInstances'])
-    if not vpc_id:
-        return rds_instances
-    else:
-        return [r for r in rds_instances if r['DBSubnetGroup']['VpcId'] == vpc_id]
-
 def get_vpc_ids(client):
     " Returns a list of VPC IDs in the account "
     vpc_ids = []
@@ -101,6 +87,20 @@ def get_connections_statistics(client, rds_instances):
             print("Instance: %s has no datapoints." % rds_instance['DBInstanceIdentifier'])
 
     return rds_stats
+
+def get_rds_instances(client, vpc_id=None):
+    " Gets all RDS instances, per VPC, if specified. "
+
+    rds_instances = []
+    resp = client.describe_db_instances()
+    while 'Marker' in resp:
+        rds_instances.extend(resp['DBInstances'])
+        resp = client.describe_db_instances(Marker=resp['Marker'])
+    rds_instances.extend(resp['DBInstances'])
+    if not vpc_id:
+        return rds_instances
+    else:
+        return [r for r in rds_instances if r['DBSubnetGroup']['VpcId'] == vpc_id]
 
 def set_no_multiaz(client, rds_instance):
     " Takes a rds instance obj and turns off MultiAZ "
