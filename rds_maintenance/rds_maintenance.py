@@ -152,11 +152,15 @@ def get_instances_with_sg(client, sg_id, vpc_id=None):
 
     return instances_with_sg
 
+def take_snapshot(client, rds_instance):
+    """ Takes a snapshot of an RDS instance """
 
-    def take_snapshot(client, rds_instance):
-        """ Takes a snapshot of an RDS instance """
-        #TODO
-        pass
+    resp = client.create_db_snapshot(
+        DBSnapshotIdentifier='%s-FINAL' % rds_instance['DBInstanceIdentifier'],
+        DBInstanceIdentifier=rds_instance['DBInstanceIdentifier'],
+    )
+    print("Created final snapshot for %s, %s"
+          % (rds_instance['DBInstanceIdentifier'], resp['DBSnapshot']['DBSnapshotIdentifier']))
 
     def cfn_destroy(client, cfn_stack):
         """ Destroys a Cloudformation stack """
