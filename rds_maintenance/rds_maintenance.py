@@ -160,7 +160,7 @@ def take_snapshot(client, rds_instance):
     """ Takes a snapshot of an RDS instance """
 
     resp = client.create_db_snapshot(
-        DBSnapshotIdentifier='%s-FINAL' % rds_instance['DBInstanceIdentifier'],
+        DBSnapshotIdentifier='%s-final-snapshot' % rds_instance['DBInstanceIdentifier'],
         DBInstanceIdentifier=rds_instance['DBInstanceIdentifier'],
     )
     print("Created final snapshot for %s, %s"
