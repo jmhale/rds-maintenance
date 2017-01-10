@@ -178,6 +178,29 @@ def destroy_cfn_stack(client, cfn_stack):
     #TODO
     pass
 
+def get_old_instances(ec2, rds, dry_run=True, debug=True):
+    """ Gets RDS instances slated for decomm """
+    isolated_sgs = get_isolated_sgs(ec2)
+    old_instances = []
+    for group in isolated_sgs.values():
+        isolated_instances = get_instances_with_sg(rds, group)
+        for instance in isolated_instances:
+            old_instances.append(instance)
+
+    if debug:
+        for instance in old_instances:
+            print(instance['DBInstanceIdentifier'])
+        print("%s instances found." % len(old_instances))
+    return old_instances
+
+def snapshot_old_rds_instances(rds, old_instances, dry_run=True):
+    """ Performs a final snapshot on old RDS instances. """
+    for instance in old_instances:
+        if dry_run:
+            take_snapshot(rds, instance)
+        else:
+            print("DRYRUN: Would have taken a snapshot of %s" % instance['DBInstanceIdentifier'])
+
 
     isolated_sgs = get_isolated_sgs(ec2)
     all_rds_instances = get_rds_instances(rds)
