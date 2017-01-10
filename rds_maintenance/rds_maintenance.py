@@ -171,6 +171,11 @@ def main():
     ec2 = get_ec2_client(session)
     rds = get_rds_client(session)
     cloudwatch = get_cloudwatch_client(session)
+def destroy_cfn_stack(client, cfn_stack):
+    """ Destroys a Cloudformation stack """
+    #TODO
+    pass
+
 
     isolated_sgs = get_isolated_sgs(ec2)
     all_rds_instances = get_rds_instances(rds)
