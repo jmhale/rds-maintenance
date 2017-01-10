@@ -153,6 +153,26 @@ def take_snapshot(client, rds_instance):
     )
     print("Created final snapshot for %s, %s"
           % (rds_instance['DBInstanceIdentifier'], resp['DBSnapshot']['DBSnapshotIdentifier']))
+def copy_snapshot(client, rds_instance, debug=True):
+    """ Copy a snapshot the latest automated snapshot """
+    latest_snap = get_latest_snap(client, rds_instance, debug)
+    try:
+        resp = client.copy_db_snapshot(
+            SourceDBSnapshotIdentifier=latest_snap['DBSnapshotIdentifier'],
+            TargetDBSnapshotIdentifier='%s-final-snapshot-%s'
+            % (rds_instance['DBInstanceIdentifier'],
+               datetime.today().strftime('%Y-%m-%d-%H-%M-%S')),
+            CopyTags=True
+        )
+        print("Copied final snapshot for %s, %s --> %s"
+              % (rds_instance['DBInstanceIdentifier'],
+                 latest_snap['DBSnapshotIdentifier'],
+                 resp['DBSnapshot']['DBSnapshotIdentifier']))
+
+    except botocore.exceptions.ClientError as exception:
+        print("Unable to take a snapshot of instance: %s" % rds_instance['DBInstanceIdentifier'])
+        print(exception)
+
 def take_snapshot(client, rds_instance):
     """ Takes a snapshot of an RDS instance """
     try:
