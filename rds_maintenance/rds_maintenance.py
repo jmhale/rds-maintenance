@@ -139,18 +139,18 @@ def set_instance_size(client, rds_instance, size=None):
     except botocore.exceptions.ClientError:
         print("Error setting size on instance %s" % rds_instance['DBInstanceIdentifier'])
 
-def get_isolated_instances(client, sg_id, vpc_id=None):
+def get_instances_with_sg(client, sg_id, vpc_id=None):
     """ Gets all RDS instances that are using the sg_id """
     rds_instances = get_rds_instances(client, vpc_id)
 
-    isolated_instances = []
+    instances_with_sg = []
     for instance in rds_instances:
         sgs = instance['VpcSecurityGroups']
         for sg in sgs:
             if sg['VpcSecurityGroupId'] == sg_id:
-                isolated_instances.append(instance)
+                instances_with_sg.append(instance)
 
-    return isolated_instances
+    return instances_with_sg
 
 
     def take_snapshot(client, rds_instance):
