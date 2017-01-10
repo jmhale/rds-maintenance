@@ -201,10 +201,17 @@ def take_snapshot(client, rds_instance):
         print(exception)
 
 ## CloudFormation operations
-def get_cfn_stacks():
+def get_all_cfn_stacks(cfn):
     """ Returns all CFN stacks """
-    #TODO
-    pass
+    stacks = []
+
+    resp = cfn.describe_stacks()
+    while 'NextToken' in resp:
+        stacks.extend(resp['Stacks'])
+        resp = cfn.describe_stacks(NextToken=resp['NextToken'])
+    stacks.extend(resp['Stacks'])
+
+    return stacks
 
 def get_cfn_stack_for_rds(cfn, rds_instances, debug=True):
     """ Gets all CFN stacks for the given RDS instances """
