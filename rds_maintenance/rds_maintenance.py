@@ -197,10 +197,9 @@ def prep_rds_instances_for_decomm(ec2, rds, cloudwatch, dry_run=True, debug=True
 
     isolated_sgs = get_isolated_sgs(ec2)
     all_rds_instances = get_rds_instances(rds)
-    if debug:
-        print("DEBUG: Number of RDS instances found: %s" % len(all_rds_instances))
     all_rds_stats = get_connections_statistics(cloudwatch, all_rds_instances)
     if debug:
+        print("DEBUG: Number of RDS instances found: %s" % len(all_rds_instances))
         print("DEBUG: Isolated SGs {}".format(isolated_sgs))
         print("DEBUG: All RDS Instances: ")
         for instance in all_rds_instances:
