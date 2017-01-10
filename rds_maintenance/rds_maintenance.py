@@ -153,6 +153,18 @@ def take_snapshot(client, rds_instance):
     )
     print("Created final snapshot for %s, %s"
           % (rds_instance['DBInstanceIdentifier'], resp['DBSnapshot']['DBSnapshotIdentifier']))
+def take_snapshot(client, rds_instance):
+    """ Takes a snapshot of an RDS instance """
+    try:
+        resp = client.create_db_snapshot(
+            DBSnapshotIdentifier='%s-final-snapshot' % rds_instance['DBInstanceIdentifier'],
+            DBInstanceIdentifier=rds_instance['DBInstanceIdentifier'],
+        )
+        print("Created final snapshot for %s, %s"
+              % (rds_instance['DBInstanceIdentifier'], resp['DBSnapshot']['DBSnapshotIdentifier']))
+    except botocore.exceptions.ClientError as exception:
+        print("Unable to take a snapshot of instance: %s" % rds_instance['DBInstanceIdentifier'])
+        print(exception)
 
 ## CloudFormation operations
 def get_cfn_stacks():
