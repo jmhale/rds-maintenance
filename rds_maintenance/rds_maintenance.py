@@ -194,7 +194,7 @@ def copy_snapshot(client, rds_instance, debug=True):
             SourceDBSnapshotIdentifier=latest_snap['DBSnapshotIdentifier'],
             TargetDBSnapshotIdentifier='%s-final-snapshot-%s'
             % (rds_instance['DBInstanceIdentifier'],
-               datetime.today().strftime('%Y-%m-%d-%H-%M-%S')),
+               datetime.today().strftime('%Y%m%d-%H%M%S')),
             CopyTags=True
         )
         print("Copied final snapshot for %s, %s --> %s"
