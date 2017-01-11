@@ -182,7 +182,7 @@ def check_final_snap(client, rds_instance):
     snapshots = get_snaps_for_instance(client, rds_instance, 'manual')
     for snapshot in snapshots:
         if snapshot['DBSnapshotIdentifier'].startswith('%s-final-snapshot'
-                                                % rds_instance['DBInstanceIdentifier']):
+                                                       % rds_instance['DBInstanceIdentifier']):
             return True
     return False
 
