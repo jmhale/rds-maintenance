@@ -282,6 +282,11 @@ def get_old_stacks(cfn, old_instances, debug=True):
 
     return old_stacks
 
+def destroy_old_cfn_stacks(cfn, old_stacks, dry_run=True):
+    """ Destroys all old CFN stacks """
+    for stack in old_stacks:
+        destroy_cfn_stack(cfn, stack, dry_run)
+
 def snapshot_old_rds_instances(rds, old_instances, dry_run=True, debug=True):
     """ Performs a final snapshot on old RDS instances. """
     for instance in old_instances:
@@ -367,5 +372,6 @@ def main():
     old_instances = get_old_instances(ec2, rds, debug)
     # snapshot_old_rds_instances(rds, old_instances, dry_run, debug)
     old_stacks = get_old_stacks(cfn, old_instances, debug)
+    # destroy_old_cfn_stacks(cfn, old_stacks, dry_run)
 
 main()
